@@ -71,8 +71,16 @@ const htmlContent = `
 
         @media (min-width: 520px) {
             .app-container {
+                max-width: 720px;
                 height: 92dvh;
                 border-radius: 12px;
+            }
+        }
+
+        @media (min-width: 900px) {
+            .app-container {
+                max-width: 820px;
+                height: 90dvh;
             }
         }
 
@@ -235,15 +243,22 @@ const htmlContent = `
         }
 
         .message {
-            max-width: 80%;
+            max-width: 82%;
             padding: 8px 12px;
             border-radius: 10px;
             position: relative;
             font-size: 0.95rem;
             line-height: 1.4;
             word-wrap: break-word;
+            white-space: pre-wrap;
             box-shadow: 0 1px 1px rgba(0,0,0,0.1);
             animation: popIn 0.2s ease-out;
+        }
+
+        @media (min-width: 600px) {
+            .message {
+                max-width: 70%;
+            }
         }
 
         @keyframes popIn {
@@ -338,9 +353,39 @@ const htmlContent = `
             background-color: #f0f2f5;
             padding: 8px 12px 10px 12px;
             display: flex;
-            align-items: center;
+            align-items: flex-end;
             gap: 8px;
             flex-shrink: 0;
+        }
+
+        .chat-input-area textarea {
+            flex: 1;
+            border: none;
+            background: white;
+            padding: 10px 16px;
+            border-radius: 22px;
+            font-size: 1rem;
+            line-height: 1.35;
+            outline: none;
+            resize: none;
+            max-height: 120px;
+            overflow-y: auto;
+            box-shadow: 0 1px 1px rgba(0,0,0,0.06);
+        }
+
+        .btn-send {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background-color: var(--wa-green-light);
+            color: white;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: background-color 0.2s, transform 0.1s;
         }
 
         .btn-send:hover {
@@ -419,7 +464,7 @@ const htmlContent = `
 
     <!-- Eingabeformular -->
     <form class="chat-input-area" id="chat-form">
-        <input type="text" id="message-input" placeholder="Nachricht schreiben..." autocomplete="off" maxlength="500">
+        <textarea id="message-input" rows="1" placeholder="Nachricht schreiben..." autocomplete="off" maxlength="500"></textarea>
         <button type="submit" class="btn-send" aria-label="Senden">
             <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
         </button>
@@ -461,6 +506,12 @@ const htmlContent = `
         };
         window.visualViewport.addEventListener('resize', updateViewportHeight);
         window.visualViewport.addEventListener('scroll', () => window.scrollTo(0, 0));
+    }
+
+    // Automatische Höhenanpassung des Eingabefelds (wie bei WhatsApp)
+    function autoResizeInput() {
+        messageInput.style.height = 'auto';
+        messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + 'px';
     }
 
     // Emoji-Klick einfügen (ohne Fokusverlust der Tastatur)
@@ -532,11 +583,21 @@ const htmlContent = `
         socket.emit('chatMessage', text);
         socket.emit('stopTyping');
         messageInput.value = '';
+        autoResizeInput();
         messageInput.focus();
     });
 
-    // "Schreibt gerade..." Event senden
+    // Enter sendet am PC/Tablet ab, Shift+Enter macht einen Zeilenumbruch
+    messageInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            chatForm.dispatchEvent(new Event('submit'));
+        }
+    });
+
+    // "Schreibt gerade..." Event senden & Eingabefeld vergrößern
     messageInput.addEventListener('input', () => {
+        autoResizeInput();
         socket.emit('typing');
         clearTimeout(typingTimeout);
         typingTimeout = setTimeout(() => {
