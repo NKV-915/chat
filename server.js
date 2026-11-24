@@ -45,10 +45,15 @@ const htmlContent = `
         body {
             background-color: #d1d7db;
             height: 100dvh;
+            margin: 0;
+            overflow: hidden;
             display: flex;
             justify-content: center;
             align-items: center;
             color: var(--wa-text);
+            position: fixed;
+            inset: 0;
+            width: 100%;
         }
 
         /* Hauptcontainer */
@@ -292,39 +297,49 @@ const htmlContent = `
             font-style: italic;
             min-height: 24px;
             background-color: var(--wa-bg);
+            flex-shrink: 0;
+        }
+
+        /* Emoji-Leiste */
+        .emoji-bar {
+            background-color: #f0f2f5;
+            padding: 6px 12px 2px 12px;
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            border-top: 1px solid #e2e8f0;
+            scrollbar-width: none;
+            flex-shrink: 0;
+        }
+
+        .emoji-bar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .emoji-btn {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 4px 10px;
+            font-size: 1.15rem;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: transform 0.1s, background-color 0.15s;
+            user-select: none;
+        }
+
+        .emoji-btn:active {
+            transform: scale(0.9);
+            background-color: #e2e8f0;
         }
 
         /* Eingabebereich */
         .chat-input-area {
             background-color: #f0f2f5;
-            padding: 10px 12px;
+            padding: 8px 12px 10px 12px;
             display: flex;
             align-items: center;
             gap: 8px;
-        }
-
-        #message-input {
-            flex: 1;
-            padding: 11px 16px;
-            border: none;
-            border-radius: 24px;
-            font-size: 0.95rem;
-            outline: none;
-            background: white;
-        }
-
-        .btn-send {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            background-color: var(--wa-green-light);
-            color: white;
-            border: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: transform 0.1s, background-color 0.2s;
             flex-shrink: 0;
         }
 
@@ -386,6 +401,22 @@ const htmlContent = `
     <!-- Tipp-Anzeige -->
     <div id="typing-indicator"></div>
 
+    <!-- Emoji-Schnellauswahl -->
+    <div class="emoji-bar" id="emoji-bar">
+        <button type="button" class="emoji-btn">😀</button>
+        <button type="button" class="emoji-btn">😂</button>
+        <button type="button" class="emoji-btn">😍</button>
+        <button type="button" class="emoji-btn">🤔</button>
+        <button type="button" class="emoji-btn">👍</button>
+        <button type="button" class="emoji-btn">👏</button>
+        <button type="button" class="emoji-btn">🎉</button>
+        <button type="button" class="emoji-btn">❤️</button>
+        <button type="button" class="emoji-btn">👋</button>
+        <button type="button" class="emoji-btn">🙏</button>
+        <button type="button" class="emoji-btn">😎</button>
+        <button type="button" class="emoji-btn">😮</button>
+    </div>
+
     <!-- Eingabeformular -->
     <form class="chat-input-area" id="chat-form">
         <input type="text" id="message-input" placeholder="Nachricht schreiben..." autocomplete="off" maxlength="500">
@@ -415,10 +446,35 @@ const htmlContent = `
     const typingIndicator = document.getElementById('typing-indicator');
     const chatForm = document.getElementById('chat-form');
     const messageInput = document.getElementById('message-input');
+    const emojiBar = document.getElementById('emoji-bar');
 
     let currentUser = '';
     let currentRoom = '';
     let typingTimeout = null;
+
+    // Smartphone-Tastatur Fix (verhindert Hochschieben des Headers wie bei WhatsApp)
+    if (window.visualViewport) {
+        const updateViewportHeight = () => {
+            document.body.style.height = window.visualViewport.height + 'px';
+            window.scrollTo(0, 0);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        };
+        window.visualViewport.addEventListener('resize', updateViewportHeight);
+        window.visualViewport.addEventListener('scroll', () => window.scrollTo(0, 0));
+    }
+
+    // Emoji-Klick einfügen (ohne Fokusverlust der Tastatur)
+    emojiBar.addEventListener('mousedown', (e) => {
+        if (e.target.classList.contains('emoji-btn')) {
+            e.preventDefault(); // Verhindert, dass sich die Handy-Tastatur schließt
+            const emoji = e.target.textContent;
+            const start = messageInput.selectionStart || messageInput.value.length;
+            const end = messageInput.selectionEnd || messageInput.value.length;
+            messageInput.value = messageInput.value.substring(0, start) + emoji + messageInput.value.substring(end);
+            messageInput.selectionStart = messageInput.selectionEnd = start + emoji.length;
+            messageInput.dispatchEvent(new Event('input'));
+        }
+    });
 
     // Farben für verschiedene Nutzer-Nicknamen generieren
     const userColors = ['#e53935', '#8e24aa', '#3949ab', '#00897b', '#f4511e', '#6d4c41', '#1e88e5', '#43a047'];
